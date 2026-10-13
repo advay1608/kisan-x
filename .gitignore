@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.py[cod]
+outputs/tables/*.csv
+outputs/figures/*.png
+outputs/forecasts/*.csv
+outputs/KISAN_X_ANALYSIS_REPORT.md
+logs/*.log
