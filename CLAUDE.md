@@ -4,7 +4,7 @@
 Build KISAN-X as a clear, reproducible, menu-driven Python CLI for agricultural data analysis. It must address the stated problem: production, cultivated area, yield, regional/temporal patterns, statistical relationships, diversification and selected production forecasts.
 
 ## Hard constraints
-1. Keep exactly eight Python source files: `main.py` plus the seven modules under `src/`.
+1. Keep exactly two Python source files: `main.py` (menu and user interaction) plus `kisan_x.py` (the user-defined analysis module). Do not add more files or a `src/` package.
 2. Use only core Python/standard library, NumPy, Pandas, Matplotlib, Seaborn, `scipy.stats`, and Statsmodels time-series tools.
 3. Do not add Streamlit, Flask, FastAPI, Django, Plotly, scikit-learn, TensorFlow, PyTorch, databases, APIs, portfolio optimizers or other third-party frameworks.
 4. The input file is `data/this_file.csv`. Never overwrite or edit it.
@@ -18,6 +18,7 @@ Build KISAN-X as a clear, reproducible, menu-driven Python CLI for agricultural 
 12. Keep code beginner-friendly: functions, clear names, comments that explain analytical assumptions, limited abstraction and readable errors.
 13. Every major operation must save its table to `outputs/tables/`, charts to `outputs/figures/`, forecasts/evaluations to `outputs/forecasts/`, or the report to `outputs/`.
 14. Do not add class hierarchies, design patterns, automatic model search or features the student cannot explain in a viva.
+15. Keep the two files readable: `main.py` holds only menu, prompts and printing; `kisan_x.py` holds only analysis functions. Analysis logic never goes in `main.py`, and `input()`/menus never go in `kisan_x.py`.
 
 ## Syllabus coverage
 - EX 2: menu, branches, loops and input handling.

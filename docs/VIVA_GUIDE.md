@@ -15,8 +15,8 @@ A: Government district/season crop-production records, an IMD sub-divisional rai
 
 ## Python structure
 
-**Q: Why did you split code into modules?**  
-A: Each module has one responsibility. Loading and audit code is separate from analysis, statistics, plotting, forecasting and report generation. This improves reuse, readability and debugging.
+**Q: Why did you split the code into two files?**  
+A: `main.py` is the program the user runs: it owns the menu, the prompts and the printing. `kisan_x.py` is a user-defined module holding every analysis function, grouped into numbered sections that match the menu. Keeping interaction apart from analysis means a function can be tested or reused without a menu, and I can point to one section per viva question. Two files is enough for a project this size; more files would mean more imports to explain, not clearer code.
 
 **Q: What happens if the user enters an invalid menu choice?**  
 A: The program prints a validation message and repeats the menu. It does not terminate on a normal input mistake.

@@ -12,21 +12,14 @@
 
 ```text
 kisan-x/
-├── main.py                         # CLI entry point and menu
-├── requirements.txt                # Only the taught third-party libraries
+├── main.py                          # Menu, prompts and printing only
+├── kisan_x.py                       # User-defined module: all analysis functions
+├── requirements.txt                 # Only the taught third-party libraries
 ├── README.md
 ├── ARCHITECTURE.md
 ├── CLAUDE.md
 ├── data/
-│   └── this_file.csv                # User/source dataset (read-only input)
-├── src/
-│   ├── data_utils.py                # Loader, schema check, audit, output folders
-│   ├── analysis.py                  # EDA summary tables and temporal aggregations
-│   ├── statistical_analysis.py      # Descriptive stats, correlations, hypothesis test
-│   ├── diversification.py            # Crop shares, HHI and diversity summary
-│   ├── forecasting.py               # Consecutive series, ARIMA and evaluation
-│   ├── visualization.py             # PNG charts
-│   └── report.py                    # Orchestrates a reproducible analysis report
+│   └── this_file.csv                # Source dataset (read-only input)
 ├── docs/
 │   ├── DATA_DICTIONARY.md
 │   ├── PROJECT_FLOW.md
@@ -38,54 +31,60 @@ kisan-x/
 └── logs/
 ```
 
-There are **eight Python source files total**: `main.py` plus seven modules under `src/`. No separate application package, database, web server, or dashboard is used.
+There are **two Python source files total**. No package, database, web server or
+dashboard is used. The split follows the syllabus requirement for a user-defined
+module (EX 6): `main.py` is the program, `kisan_x.py` is the module it imports.
 
-## Responsibilities and interfaces
+## Responsibilities
 
 ### `main.py`
-Owns the menu, prompts, readable error messages and top-level function calls. It reads the file once at startup and keeps the original loaded DataFrame for each operation. It does not implement statistical formulas directly.
+Owns the menu loop, the numbered prompts, the readable error messages and the
+printing of results. It loads the CSV once at startup and passes that same
+DataFrame to every option. It contains no statistical formula.
 
-### `src/data_utils.py`
-- Defines the required schema.
-- Loads CSV through `pandas.read_csv`.
-- Coerces numeric analytical fields to numbers in memory; invalid values become missing and are visible in the audit.
-- Reports schema, missingness, duplicates, unit coverage, negative values, `Yield` versus `Production / Area`, and rainfall uniqueness at State-Year level.
-- Creates output directories.
-- Never writes or overwrites `data/this_file.csv`.
+### `kisan_x.py`
+One module with eight numbered sections, in the same order as the menu:
 
-### `src/analysis.py`
-Creates summary tables: reported crop area by state/year, production by state/year/unit, crop area by state/crop, yield summaries and crop-production time series. Production aggregation always includes `Production_Unit`.
+| Section | Functions | Saves to |
+| --- | --- | --- |
+| Paths and helpers | `make_output_directories`, `save_table`, `save_figure`, `safe_name` | — |
+| Loading | `load_data`, `annual_series` | — |
+| 1. Audit | `audit_data` | `tables/` |
+| 2. EDA | `build_eda_tables`, `make_eda_charts` | `tables/`, `figures/` |
+| 3. Descriptive statistics | `descriptive_statistics` | `tables/` |
+| 4. Rainfall association | `rainfall_yield_correlations`, `plot_rainfall_yield` | `tables/`, `figures/` |
+| 5. Hypothesis test | `season_yield_test` | `tables/` |
+| 6. Diversification | `diversification`, `plot_diversification` | `tables/`, `figures/` |
+| 7. Forecasting | `forecast_candidates`, `production_series`, `forecast_production`, `error_metrics`, `year_label` | `forecasts/`, `figures/` |
+| 8. Report | `markdown_table`, `generate_report` | `outputs/` |
 
-### `src/statistical_analysis.py`
-Creates grouped descriptive statistics, summaries of distinct crop-year MSP values, rainfall-yield correlations and the selected Kruskal–Wallis test. It aggregates records before inference to prevent multiple copies of state-level rainfall from being treated as independent weather observations.
+Two functions are shared across sections:
 
-### `src/diversification.py`
-Computes crop-area shares by state/year and simple crop-concentration/diversity measures. Formulae are documented in the output and project flow docs.
-
-### `src/forecasting.py`
-Identifies complete annual series, aggregates one state/crop/unit at a time, evaluates ARIMA(1,1,0) on the final three observed years, compares it with a naive previous-year baseline, refits on the available history and generates three future points. No missing year is silently filled.
-
-### `src/visualization.py`
-Creates titled, labelled and saved Matplotlib/Seaborn charts. The backend is non-interactive so the CLI can save charts without requiring a GUI window.
-
-### `src/report.py`
-Runs audit, EDA, statistics, correlations, diversification, plots, one eligible season-test attempt per state and one explainably selected forecasting series per state. It writes `outputs/KISAN_X_ANALYSIS_REPORT.md` and supporting files.
+- `load_data()` validates the 12-column schema, coerces the numeric fields in
+  memory (bad values become NaN and show up in the audit) and derives
+  `Year_Start` from labels such as `1997-98`. It never writes to the CSV.
+- `annual_series()` collapses district and season rows to one record per
+  Year-State-Crop-Unit and computes weighted yield. Every rainfall calculation
+  calls it first, so repeated state rainfall values cannot be counted as
+  independent observations.
 
 ## Data flow
 
 ```text
 main.py
-  └── data_utils.load_dataset()
-        └── data/this_file.csv (read-only)
+  └── kisan_x.load_data() ──────────── data/this_file.csv (read-only)
 
-CLI choice
-  ├── data_utils.run_data_audit() ───────> outputs/tables/
-  ├── analysis.build_eda_tables() ───────> outputs/tables/
-  ├── statistical_analysis.*() ─────────> outputs/tables/
-  ├── diversification.*() ───────────────> outputs/tables/
-  ├── forecasting.*() ──────────────────> outputs/forecasts/ + figure
-  ├── visualization.*() ────────────────> outputs/figures/
-  └── report.generate_full_report() ─────> Markdown report + all outputs
+menu choice
+  ├── kisan_x.audit_data() ──────────> outputs/tables/
+  ├── kisan_x.build_eda_tables()
+  │   + make_eda_charts() ───────────> outputs/tables/ + outputs/figures/
+  ├── kisan_x.descriptive_statistics() > outputs/tables/
+  ├── kisan_x.rainfall_yield_correlations() > outputs/tables/
+  ├── kisan_x.season_yield_test() ───> outputs/tables/
+  ├── kisan_x.diversification() ─────> outputs/tables/ + outputs/figures/
+  ├── kisan_x.forecast_production() ─> outputs/forecasts/ + outputs/figures/
+  └── kisan_x.generate_report() ─────> outputs/KISAN_X_ANALYSIS_REPORT.md
+                                       (and every output above)
 ```
 
 ## Statistical design rules
@@ -104,4 +103,4 @@ Expected problems such as missing files, missing schema columns, invalid menu se
 
 ## Extension policy
 
-Do not add new libraries or modules unless a syllabus need cannot be met with the current files. The target is a complete, understandable eight-file CLI—not maximum abstraction.
+Do not add new libraries or modules unless a syllabus need cannot be met with the current files. The target is a complete, understandable two-file CLI—not maximum abstraction. A new analysis is a new function in `kisan_x.py` and a new entry in the `MENU` list in `main.py`, not a new file.
