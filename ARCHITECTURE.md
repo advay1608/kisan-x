@@ -47,7 +47,7 @@ One module with eight numbered sections, in the same order as the menu:
 
 | Section | Functions | Saves to |
 | --- | --- | --- |
-| Paths and helpers | `make_output_directories`, `save_table`, `save_figure`, `safe_name` | — |
+| Paths and helpers | `make_output_directories`, `save_table`, `save_figure`, `safe_name`, `line_chart_by_state` | — |
 | Loading | `load_data`, `annual_series` | — |
 | 1. Audit | `audit_data` | `tables/` |
 | 2. EDA | `build_eda_tables`, `make_eda_charts` | `tables/`, `figures/` |
@@ -55,8 +55,8 @@ One module with eight numbered sections, in the same order as the menu:
 | 4. Rainfall association | `rainfall_yield_correlations`, `plot_rainfall_yield` | `tables/`, `figures/` |
 | 5. Hypothesis test | `season_yield_test` | `tables/` |
 | 6. Diversification | `diversification`, `plot_diversification` | `tables/`, `figures/` |
-| 7. Forecasting | `forecast_candidates`, `production_series`, `forecast_production`, `error_metrics`, `year_label` | `forecasts/`, `figures/` |
-| 8. Report | `markdown_table`, `generate_report` | `outputs/` |
+| 7. Forecasting | `has_consecutive_years`, `forecast_candidates`, `production_series`, `year_label`, `error_metrics`, `stationarity_test`, `fit_arima`, `forecast_production` | `forecasts/`, `figures/` |
+| 8. Report | `markdown_table`, `report_rainfall_plots`, `report_season_tests`, `report_forecasts`, `generate_report`, `write_report` | `outputs/` |
 
 Two functions are shared across sections:
 
@@ -103,4 +103,4 @@ Expected problems such as missing files, missing schema columns, invalid menu se
 
 ## Extension policy
 
-Do not add new libraries or modules unless a syllabus need cannot be met with the current files. The target is a complete, understandable two-file CLI—not maximum abstraction. A new analysis is a new function in `kisan_x.py` and a new entry in the `MENU` list in `main.py`, not a new file.
+Do not add new libraries or modules unless a syllabus need cannot be met with the current files. The target is a complete, understandable two-file CLI—not maximum abstraction. A new analysis is a new function in `kisan_x.py` and a new line in `print_menu()` plus a new `elif` branch in `main()`, not a new file.
