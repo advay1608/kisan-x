@@ -1,239 +1,182 @@
-"""KISAN-X menu-driven command-line program.
-
-This file only talks to the user: it shows the menu, reads choices, calls the
-matching function in kisan_x.py and prints the results. All analysis is in
-kisan_x.py (our user-defined module).
-"""
+"""KISAN-X: crop production analysis and forecasting. Run this file to start."""
 
 import kisan_x
 
 
-# ===========================================================================
-# Input and printing helpers
-# ===========================================================================
+# ---------------- Helpers ----------------
 
 def show_table(table, rows=15):
-    """Print the first few rows of a table."""
     if table is None or table.empty:
-        print("No results are available for this selection.")
+        print("No results to show.")
         return
     print(table.head(rows).to_string(index=False))
     if len(table) > rows:
-        print(f"... showing {rows} of {len(table)} rows. The full table is in the saved CSV.")
+        print(f"... showing {rows} of {len(table)} rows (full table saved as CSV)")
 
 
 def choose_from_list(prompt, options):
-    """Print numbered options and return the one the user picks.
-
-    The user can type the number (e.g. 3) or the name (e.g. Wheat).
-    """
-    options = [str(option) for option in options]
-    if not options:
-        raise ValueError("No options are available for this step.")
-
-    print("\nAvailable options:")
+    options = list(options)
+    print()
     for number, option in enumerate(options, start=1):
         print(f"{number:>3}. {option}")
 
-    answer = input(f"{prompt} (name or number): ").strip()
+    answer = input(f"{prompt} (number or name): ").strip()
     if answer.isdigit() and 1 <= int(answer) <= len(options):
         return options[int(answer) - 1]
     for option in options:
         if option.lower() == answer.lower():
             return option
-    raise ValueError("Selection not recognised. Choose a listed name or number.")
+    raise ValueError("That choice is not in the list.")
 
 
-def ask_state_and_crop(data):
-    """Ask for a state, then for a crop grown in that state."""
-    state = choose_from_list("Choose a state", sorted(data["State"].dropna().unique()))
-    crops_in_state = sorted(data.loc[data["State"] == state, "Crop"].dropna().unique())
-    crop = choose_from_list("Choose a crop", crops_in_state)
+def choose_state_and_crop(data):
+    state = choose_from_list("Choose a state", sorted(data["State"].unique()))
+    crops = sorted(data.loc[data["State"] == state, "Crop"].unique())
+    crop = choose_from_list("Choose a crop", crops)
     return state, crop
 
 
-# ===========================================================================
-# One function per menu option
-# ===========================================================================
+# ---------------- Menu options ----------------
 
-def option_audit(data):
-    audit, missing, units = kisan_x.audit_data(data)
-    print("\nDATA AUDIT SUMMARY")
-    show_table(audit, rows=20)
-    print("\nMISSING VALUES BY COLUMN")
+def option_data_quality(data):
+    quality, missing, units = kisan_x.check_data_quality(data)
+    print("\nDATA QUALITY CHECKS")
+    show_table(quality)
+    print("\nMISSING VALUES")
     show_table(missing)
-    print("\nPRODUCTION UNIT COVERAGE")
+    print("\nPRODUCTION UNITS")
     show_table(units)
-    print("\nSaved audit tables to outputs/tables/.")
 
 
-def option_eda(data):
-    tables = kisan_x.build_eda_tables(data)
-    charts = kisan_x.make_eda_charts(data, tables)
-    print("\nTOP CROPS BY REPORTED AREA (ALL YEARS COMBINED)")
-    show_table(tables["top_crops"], rows=20)
-    print("\nSTATE/YEAR PRODUCTION TOTALS (KEPT SEPARATE BY UNIT)")
-    show_table(tables["production_by_state_year"])
-    print(f"\nSaved {len(charts)} figures and {len(tables)} tables.")
-    print("Reminder: area is summed across crop-season records, not unique land.")
+def option_explore(data):
+    top_crops, production, charts = kisan_x.explore_data(data)
+    print("\nTOP CROPS BY AREA IN EACH STATE")
+    show_table(top_crops, rows=40)
+    print(f"\n{len(charts)} charts saved in outputs/figures/")
 
 
-def option_descriptive(data):
-    yield_stats, msp_stats = kisan_x.descriptive_statistics(data)
-    print("\nYIELD STATISTICS BY STATE / CROP / UNIT")
-    show_table(yield_stats, rows=20)
-    print("\nMSP STATISTICS (UNIQUE CROP-YEAR PRICES)")
+def option_statistics(data):
+    yield_stats, msp_stats, msp_chart = kisan_x.describe_data(data)
+    print("\nYIELD STATISTICS (per state and crop)")
+    show_table(yield_stats)
+    print("\nMSP STATISTICS")
     show_table(msp_stats)
-    print("\nSaved both tables to outputs/tables/.")
+    print("\nMSP chart saved:", msp_chart)
 
 
 def option_rainfall(data):
-    results = kisan_x.rainfall_yield_correlations(data)
-    if results.empty:
-        print("No series met the minimum sample-size requirement.")
-        return
-    print("\nSTRONGEST ABSOLUTE PEARSON ASSOCIATIONS (EXPLORATORY)")
-    show_table(results.drop(columns=["Absolute_Pearson_r"]), rows=12)
+    results = kisan_x.rainfall_yield_correlation(data)
+    print("\nSTRONGEST RAINFALL-YIELD CORRELATIONS")
+    show_table(results, rows=10)
+    print("Correlation shows association only, not cause and effect.")
 
-    answer = input("\nCreate a rainfall-yield scatter plot? (y/n): ").strip().lower()
-    if answer == "y":
-        state, crop = ask_state_and_crop(data)
-        print("Saved scatter plot:", kisan_x.plot_rainfall_yield(data, state, crop))
-    print("\nAssociation is not causation; rainfall is a state-level proxy.")
+    if input("\nDraw a rainfall vs yield chart? (y/n): ").strip().lower() == "y":
+        state, crop = choose_state_and_crop(data)
+        print("Chart saved:", kisan_x.plot_rainfall_yield(data, state, crop))
 
 
-def option_hypothesis(data):
-    state, crop = ask_state_and_crop(data)
-    result = kisan_x.season_yield_test(data, state, crop)
-    print("\nKRUSKAL-WALLIS SEASON COMPARISON")
+def option_seasons(data):
+    state, crop = choose_state_and_crop(data)
+    result = kisan_x.compare_seasons(data, state, crop)
+    print("\nKRUSKAL-WALLIS TEST")
+    print("H0: yield is the same in every season")
     for key, value in result.items():
-        print(f"{key.replace('_', ' ')}: {value}")
-    print("\nThe test compares distributions; it does not show that the season caused them.")
+        print(f"{key}: {value}")
 
 
-def option_diversification(data):
-    shares, metrics, top_five = kisan_x.diversification(data)
-    charts = kisan_x.plot_diversification(metrics)
-    latest_year = metrics["Year_Start"].max()
-
-    print("\nDIVERSIFICATION METRICS FOR THE LATEST YEAR")
-    show_table(metrics[metrics["Year_Start"] == latest_year].sort_values("State"))
-    print("\nTOP FIVE CROP AREA SHARES FOR THE LATEST YEAR")
-    show_table(top_five[top_five["Year_Start"] == latest_year], rows=20)
-    print(f"\nSaved 3 tables and {len(charts)} charts.")
-    print("HHI = sum of squared area shares; higher HHI means more concentration.")
+def option_diversity(data):
+    diversity, chart = kisan_x.crop_diversity(data)
+    latest = diversity[diversity["Year_Start"] == diversity["Year_Start"].max()]
+    print("\nCROP DIVERSITY IN THE LATEST YEAR")
+    show_table(latest.sort_values("Diversity_Index", ascending=False))
+    print("Higher diversity index = area spread more evenly across crops.")
+    print("Chart saved:", chart)
 
 
 def option_forecast(data):
-    candidates = kisan_x.forecast_candidates(data)
-    if candidates.empty:
-        print("No series has enough consecutive annual observations to forecast.")
-        return
+    series = kisan_x.forecastable_series(data)
+    state = choose_from_list("Choose a state", sorted(series["State"].unique()))
+    state_series = series[series["State"] == state]
+    show_table(state_series, rows=40)
 
-    print(f"\nEligible series need at least {kisan_x.MIN_FORECAST_YEARS} "
-          "consecutive annual observations.")
-    state = choose_from_list("Choose a state", sorted(candidates["State"].unique()))
-
-    in_state = candidates[candidates["State"] == state]
-    print("\nELIGIBLE SERIES FOR", state)
-    show_table(in_state[["Crop", "Production_Unit", "Annual_Points", "First_Year", "Last_Year"]],
-               rows=30)
-
-    crop = choose_from_list("Choose a crop from the table above", sorted(in_state["Crop"].unique()))
-    units = sorted(in_state.loc[in_state["Crop"] == crop, "Production_Unit"])
-    if len(units) == 1:
-        unit = units[0]
-    else:
-        unit = choose_from_list("Choose a production unit", units)
+    crop = choose_from_list("Choose a crop", list(state_series["Crop"].unique()))
+    units = list(state_series.loc[state_series["Crop"] == crop, "Production_Unit"])
+    unit = units[0]
+    if len(units) > 1:
+        unit = choose_from_list("Choose a unit", units)
 
     result = kisan_x.forecast_production(data, state, crop, unit)
-    print("\nHOLDOUT EVALUATION (LOWER MAE AND RMSE ARE BETTER)")
-    show_table(result["evaluation"][["Model", "Training_Years", "Holdout_Years",
-                                     "MAE", "RMSE", "Stationarity_Note"]])
+    print("\nStationarity:", result["stationarity"])
+    print("\nTEST ON THE LAST YEARS (lower error is better)")
+    show_table(result["evaluation"])
+    print("Better model:", result["better_model"])
     print("\nFUTURE FORECAST")
-    show_table(result["future_forecast"][["Forecast_Year", "Forecast_Production_NonNegative",
-                                          "Lower_95_Percent", "Upper_95_Percent"]])
-    if result["arima_mae"] < result["naive_mae"]:
-        print("\nOn this holdout, ARIMA beat the naive baseline on MAE.")
-    else:
-        print("\nOn this holdout, ARIMA did not beat the naive baseline on MAE.")
-    print("The forecast uses past production only; it is an estimate, not a guarantee.")
+    show_table(result["forecast"])
+    print("Chart saved:", result["chart"])
 
 
 def option_report(data):
-    print("Running the audit, EDA, statistics, correlations, tests and forecasts...")
-    result = kisan_x.generate_report(data)
-    print("\nREPORT CREATED:", result["report_path"])
+    print("Running every analysis, please wait...")
+    report_file, forecasts = kisan_x.generate_report(data)
     print("\nFORECAST SUMMARY")
-    show_table(result["forecast_summary"], rows=12)
-    print("\nAll supporting tables and figures are in the outputs folder.")
+    show_table(forecasts)
+    print("\nReport saved:", report_file)
 
 
-# ===========================================================================
-# Main menu loop
-# ===========================================================================
+# ---------------- Main menu ----------------
 
 def print_menu():
-    print("\nMAIN MENU")
-    print("1. Dataset overview and data-quality audit")
-    print("2. Exploratory analysis and charts")
-    print("3. Descriptive statistical summaries")
-    print("4. Rainfall and yield relationships")
-    print("5. Compare yield across seasons (hypothesis test)")
-    print("6. Crop diversification analysis")
-    print("7. Forecast crop production")
-    print("8. Generate the complete analysis report")
+    print("\n========== KISAN-X MENU ==========")
+    print("1. Data quality check")
+    print("2. Explore crops, area and production")
+    print("3. Descriptive statistics (yield and MSP)")
+    print("4. Rainfall vs yield")
+    print("5. Compare yield across seasons")
+    print("6. Crop diversification")
+    print("7. Forecast production")
+    print("8. Generate full report")
     print("0. Exit")
 
 
 def main():
-    print("\n" + "=" * 62)
-    print("                         KISAN-X")
-    print("       CROP PRODUCTION ANALYSIS AND FORECASTING SYSTEM")
-    print("=" * 62)
-
-    kisan_x.make_output_directories()
+    print("KISAN-X - Crop Production Analysis and Forecasting")
+    kisan_x.make_output_folders()
     try:
         data = kisan_x.load_data()
-    except (FileNotFoundError, ValueError, OSError) as error:
-        print("\nUnable to load the dataset:")
-        print(error)
+    except (FileNotFoundError, ValueError) as error:
+        print("Could not load the data:", error)
         return
-    print(f"Loaded {len(data)} rows from data/this_file.csv (read-only).")
+    print(f"Loaded {len(data)} rows from data/this_file.csv")
 
     while True:
         print_menu()
-        choice = input("\nEnter your choice: ").strip()
-
+        choice = input("Enter your choice: ").strip()
         try:
             if choice == "1":
-                option_audit(data)
+                option_data_quality(data)
             elif choice == "2":
-                option_eda(data)
+                option_explore(data)
             elif choice == "3":
-                option_descriptive(data)
+                option_statistics(data)
             elif choice == "4":
                 option_rainfall(data)
             elif choice == "5":
-                option_hypothesis(data)
+                option_seasons(data)
             elif choice == "6":
-                option_diversification(data)
+                option_diversity(data)
             elif choice == "7":
                 option_forecast(data)
             elif choice == "8":
                 option_report(data)
             elif choice == "0":
-                print("Thank you for using KISAN-X. Goodbye!")
+                print("Goodbye!")
                 break
             else:
-                print("Invalid choice. Enter a number from 0 to 8.")
-        except (ValueError, OSError) as error:
-            # Expected problems: a wrong selection, too little data, or a file error.
-            print("\nOperation could not be completed:", error)
+                print("Please enter a number from 0 to 8.")
+        except ValueError as error:
+            print("Error:", error)
         except Exception as error:
-            # Anything unexpected is shown, never hidden, so a wrong result
-            # is never mistaken for a correct one.
-            print("\nUnexpected error:", error)
+            print("Something went wrong:", error)
 
 
 if __name__ == "__main__":

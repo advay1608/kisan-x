@@ -33,7 +33,7 @@ kisan-x/
 
 There are **two Python source files total**. No package, database, web server or
 dashboard is used. The split follows the syllabus requirement for a user-defined
-module (EX 6): `main.py` is the program, `kisan_x.py` is the module it imports.
+module (syllabus unit 2.2): `main.py` is the program, `kisan_x.py` is the module it imports.
 
 ## Responsibilities
 
@@ -47,44 +47,41 @@ One module with eight numbered sections, in the same order as the menu:
 
 | Section | Functions | Saves to |
 | --- | --- | --- |
-| Paths and helpers | `make_output_directories`, `save_table`, `save_figure`, `safe_name`, `line_chart_by_state` | — |
-| Loading | `load_data`, `annual_series` | — |
-| 1. Audit | `audit_data` | `tables/` |
-| 2. EDA | `build_eda_tables`, `make_eda_charts` | `tables/`, `figures/` |
-| 3. Descriptive statistics | `descriptive_statistics` | `tables/` |
-| 4. Rainfall association | `rainfall_yield_correlations`, `plot_rainfall_yield` | `tables/`, `figures/` |
-| 5. Hypothesis test | `season_yield_test` | `tables/` |
-| 6. Diversification | `diversification`, `plot_diversification` | `tables/`, `figures/` |
-| 7. Forecasting | `has_consecutive_years`, `forecast_candidates`, `production_series`, `year_label`, `error_metrics`, `stationarity_test`, `fit_arima`, `forecast_production` | `forecasts/`, `figures/` |
-| 8. Report | `markdown_table`, `report_rainfall_plots`, `report_season_tests`, `report_forecasts`, `generate_report`, `write_report` | `outputs/` |
+| Saving files | `make_output_folders`, `save_table`, `save_chart`, `clean_name`, `line_chart_by_state` | — |
+| Loading | `load_data`, `yearly_totals` | — |
+| 1. Data quality | `find_yield_outliers`, `check_data_quality` | `tables/` |
+| 2. Exploration | `explore_data` | `tables/`, `figures/` |
+| 3. Descriptive statistics | `describe_data` | `tables/`, `figures/` |
+| 4. Rainfall and yield | `correlation_strength`, `rainfall_yield_correlation`, `plot_rainfall_yield` | `tables/`, `figures/` |
+| 5. Season test | `compare_seasons` | `tables/`, `figures/` |
+| 6. Diversification | `crop_diversity` | `tables/`, `figures/` |
+| 7. Forecasting | `forecastable_series`, `year_label`, `mae_and_rmse`, `fit_arima`, `forecast_production` | `forecasts/`, `figures/` |
+| 8. Report | `season_tests_for_report`, `forecasts_for_report`, `production_change`, `text_table`, `generate_report` | `outputs/` |
 
 Two functions are shared across sections:
 
-- `load_data()` validates the 12-column schema, coerces the numeric fields in
-  memory (bad values become NaN and show up in the audit) and derives
-  `Year_Start` from labels such as `1997-98`. It never writes to the CSV.
-- `annual_series()` collapses district and season rows to one record per
-  Year-State-Crop-Unit and computes weighted yield. Every rainfall calculation
-  calls it first, so repeated state rainfall values cannot be counted as
-  independent observations.
+- `load_data()` checks the 12 columns, converts the numeric fields in memory
+  (bad values become NaN) and makes `Year_Start` from labels such as `1997-98`.
+  It never writes to the CSV.
+- `yearly_totals()` combines district and season rows into one record per
+  State-Crop-Unit-Year and computes weighted yield. Rainfall is taken once per
+  state-year (`"first"`), so repeated copies are not counted as extra data.
 
 ## Data flow
 
 ```text
 main.py
-  └── kisan_x.load_data() ──────────── data/this_file.csv (read-only)
+  └── kisan_x.load_data() ──────────────── data/this_file.csv (read-only)
 
 menu choice
-  ├── kisan_x.audit_data() ──────────> outputs/tables/
-  ├── kisan_x.build_eda_tables()
-  │   + make_eda_charts() ───────────> outputs/tables/ + outputs/figures/
-  ├── kisan_x.descriptive_statistics() > outputs/tables/
-  ├── kisan_x.rainfall_yield_correlations() > outputs/tables/
-  ├── kisan_x.season_yield_test() ───> outputs/tables/
-  ├── kisan_x.diversification() ─────> outputs/tables/ + outputs/figures/
-  ├── kisan_x.forecast_production() ─> outputs/forecasts/ + outputs/figures/
-  └── kisan_x.generate_report() ─────> outputs/KISAN_X_ANALYSIS_REPORT.md
-                                       (and every output above)
+  1 ── check_data_quality() ────────────> outputs/tables/
+  2 ── explore_data() ──────────────────> outputs/tables/ + outputs/figures/
+  3 ── describe_data() ─────────────────> outputs/tables/ + outputs/figures/
+  4 ── rainfall_yield_correlation() ────> outputs/tables/ (+ plot_rainfall_yield)
+  5 ── compare_seasons() ───────────────> outputs/tables/ + outputs/figures/
+  6 ── crop_diversity() ────────────────> outputs/tables/ + outputs/figures/
+  7 ── forecast_production() ───────────> outputs/forecasts/ + outputs/figures/
+  8 ── generate_report() ───────────────> outputs/KISAN_X_ANALYSIS_REPORT.md
 ```
 
 ## Statistical design rules

@@ -54,11 +54,11 @@ Output tables:
 - `yield_summary_by_state_crop.csv`: count, mean, median, standard deviation, minimum and maximum by state/crop/unit.
 - `production_by_crop_year.csv`: annual production and area for each state/crop/unit.
 
-Charts include area trends, production trends by unit, top crop-area bars, yield histogram and representative rainfall-yield scatter plots.
+Charts include area trends, production trends by unit, top crop-area bars, yield histogram, an MSP trend line, rainfall-yield regression scatter plots and season box plots.
 
 ## Phase 3 — Descriptive statistics
 
-For each state/crop/unit yield series, the program computes count, mean, median, standard deviation, variance, skewness, kurtosis, minimum and maximum. These summaries can reveal spread, asymmetry and extreme values, but they do not explain why a crop performed differently.
+For each state/crop/unit yield series, the program computes record count, mean, median, standard deviation, minimum, maximum, skewness and coefficient of variation (CV = std / mean x 100). These summaries can reveal spread, asymmetry and extreme values, but they do not explain why a crop performed differently.
 
 MSP statistics use distinct crop/year/MSP values so that a single crop-year price repeated across many district observations is not counted as a new price for every district.
 
@@ -93,10 +93,9 @@ For each state/year:
 1. Sum reported crop-season area for each crop.
 2. Calculate each crop's area share `s_i = crop area / total reported crop-season area`.
 3. Calculate the Herfindahl concentration index `HHI = sum(s_i ** 2)`.
-4. Calculate `Area_Diversity_Index = 1 - HHI`.
-5. Calculate `Effective_Number_of_Crops = 1 / HHI`.
+4. Calculate `Diversity_Index = 1 - HHI`.
 
-HHI is near 1 when one crop dominates reported area; it is smaller when area is divided among many crops. `1 - HHI` increases with a more even area distribution. The effective number of crops expresses concentration as the equivalent count of equally sized crops. These are descriptive indices, not profitability or sustainability scores.
+HHI is near 1 when one crop dominates reported area; it is smaller when area is divided among many crops. `1 - HHI` increases with a more even area distribution. These are descriptive indices, not profitability or sustainability scores.
 
 ## Phase 7 — Forecasting
 
