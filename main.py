@@ -233,7 +233,7 @@ def main():
         except Exception as error:
             # Anything unexpected is shown, never hidden, so a wrong result
             # is never mistaken for a correct one.
-            print("\nUnexpected error:", type(error).__name__, "-", error)
+            print("\nUnexpected error:", error)
 
 
 if __name__ == "__main__":

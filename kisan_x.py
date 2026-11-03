@@ -12,7 +12,6 @@ Rules that every function follows:
 """
 
 import os
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -90,10 +89,9 @@ def save_figure(figure, filename):
     return path
 
 
-def safe_name(*parts):
-    """Join labels into a file-safe name, e.g. ("Uttar Pradesh", "Rice") -> Uttar_Pradesh_Rice."""
-    text = "_".join(str(part) for part in parts)
-    return text.replace("/", "-").replace(" ", "_")
+def safe_name(text):
+    """Make text safe for a file name, e.g. "Uttar Pradesh_Rice" -> "Uttar_Pradesh_Rice"."""
+    return str(text).replace("/", "-").replace(" ", "_")
 
 
 def line_chart_by_state(table, y_column, title, y_label, filename):
@@ -422,7 +420,8 @@ def plot_rainfall_yield(data, state, crop):
     axis.set_title(f"Monsoon Rainfall and Crop Yield - {state} / {crop}")
     axis.set_xlabel("JJAS rainfall proxy (mm)")
     axis.set_ylabel("Weighted yield (production unit per hectare)")
-    return save_figure(figure, f"rainfall_yield_{safe_name(state, crop)}.png")
+    name = safe_name(state + "_" + crop)
+    return save_figure(figure, f"rainfall_yield_{name}.png")
 
 
 # ===========================================================================
@@ -602,9 +601,8 @@ def stationarity_test(values):
     why the ARIMA model differences the data once (the middle 1 in (1,1,0)).
     """
     try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")      # hide technical statsmodels messages
-            result = adfuller(values, autolag="AIC")
+        # result_object=False asks for the plain tuple: (statistic, p-value, ...).
+        result = adfuller(values, autolag="AIC", result_object=False)
     except Exception as error:
         return np.nan, np.nan, f"Stationarity test unavailable: {error}"
 
@@ -622,11 +620,9 @@ def fit_arima(values):
     (1,1,0) = 1 autoregressive term, data differenced 1 time, 0 moving-average
     terms. The order is fixed on purpose instead of searched automatically.
     """
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")          # hide technical statsmodels messages
-        model = ARIMA(values, order=(1, 1, 0),
-                      enforce_stationarity=False, enforce_invertibility=False)
-        return model.fit()
+    model = ARIMA(values, order=(1, 1, 0),
+                  enforce_stationarity=False, enforce_invertibility=False)
+    return model.fit()
 
 
 def forecast_production(data, state, crop, unit):
@@ -691,7 +687,7 @@ def forecast_production(data, state, crop, unit):
         "Stationarity_Note": adf_note,
     })
 
-    name = safe_name(state, crop, unit)
+    name = safe_name(state + "_" + crop + "_" + unit)
     save_table(future_table, f"{name}_future_forecast.csv", folder="forecasts")
     save_table(evaluation, f"{name}_evaluation.csv", folder="forecasts")
 
